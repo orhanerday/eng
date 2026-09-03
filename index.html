@@ -1,0 +1,1366 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grammar Practice</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --panel: #f6f6f6;
+      --text: #171717;
+      --muted: #666;
+      --border: #d8d8d8;
+      --accent: #2457d6;
+      --good: #177245;
+      --bad: #b42318;
+      --warning: #8a5a00;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #151515;
+        --panel: #202020;
+        --text: #f2f2f2;
+        --muted: #aaa;
+        --border: #3b3b3b;
+        --accent: #82a7ff;
+        --good: #63c58d;
+        --bad: #ff8a80;
+        --warning: #e8bb62;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    h1, h2, p { margin-top: 0; }
+    h1 { font-size: 1.5rem; margin-bottom: 6px; }
+    h2 { font-size: 1.05rem; margin-bottom: 10px; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      background: var(--panel);
+    }
+    .setup { max-width: 560px; margin: 64px auto; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .between { justify-content: space-between; }
+    input, textarea, select, button {
+      font: inherit;
+    }
+    input[type="password"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    button {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 12px;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .topbar { margin-bottom: 18px; }
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 260px) 1fr;
+      gap: 14px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+    .field-label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 5px; }
+    .mode {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+    .mode button {
+      border: 0;
+      border-radius: 0;
+      min-width: 100px;
+    }
+    .mode button.active {
+      background: var(--accent);
+      color: white;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 980px;
+      background: var(--bg);
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th:last-child, td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      font-size: .78rem;
+      white-space: nowrap;
+      z-index: 1;
+    }
+    .tense-cell { min-width: 170px; }
+    .priority {
+      display: inline-block;
+      font-size: .68rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 1px 6px;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+    .priority.high { color: var(--good); }
+    .priority.low { color: var(--warning); }
+    .grammar-cell {
+      width: 100%;
+      min-width: 105px;
+      min-height: 72px;
+      text-align: left;
+      padding: 7px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+    }
+    .grammar-cell:hover, .grammar-cell.selected { background: var(--panel); }
+    .example { font-size: .8rem; }
+    .score { font-size: .68rem; color: var(--muted); margin-top: 5px; }
+    .workspace { margin-top: 0; }
+    .practice-dialog {
+      width: min(760px, calc(100% - 24px));
+      max-width: 760px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .practice-dialog::backdrop {
+      background: rgba(0, 0, 0, .35);
+    }
+    .practice-dialog .workspace {
+      border: 0;
+      border-radius: 0;
+      background: var(--bg);
+      padding: 18px;
+    }
+    .target {
+      font-weight: 650;
+      margin-bottom: 4px;
+    }
+    .message {
+      max-width: 680px;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px 12px 12px 3px;
+      background: var(--bg);
+      margin: 12px 0;
+    }
+    .hint {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .9rem;
+      margin: 10px 0;
+      padding: 8px 10px;
+      border-left: 3px solid var(--accent);
+      background: var(--bg);
+    }
+    .feedback {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .feedback.good { border-color: var(--good); }
+    .feedback.bad { border-color: var(--bad); }
+    .feedback-title { font-weight: 700; margin-bottom: 4px; }
+    .tiny { font-size: .78rem; }
+    .spinner { color: var(--muted); margin: 10px 0; }
+
+    .note-dialog {
+      width: min(720px, calc(100% - 24px));
+      max-width: 720px;
+      margin: auto auto 0;
+      border: 1px solid var(--border);
+      border-radius: 12px 12px 0 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .note-dialog::backdrop {
+      background: rgba(0, 0, 0, .35);
+    }
+    .note-dialog textarea {
+      min-height: 140px;
+    }
+    .notes-dialog {
+      max-height: 75%;
+      overflow: auto;
+    }
+    .notes-list {
+      display: grid;
+      gap: 10px;
+    }
+    .note-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--panel);
+    }
+    .note-item-text {
+      white-space: pre-wrap;
+      margin: 6px 0 8px;
+    }
+    .empty-notes {
+      color: var(--muted);
+      padding: 18px 0;
+      text-align: center;
+    }
+    @media (max-width: 680px) {
+      .wrap { padding: 14px; }
+      .controls { grid-template-columns: 1fr; }
+      .row.mobile-stack { align-items: stretch; }
+      .row.mobile-stack > * { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section id="setup" class="setup panel hidden">
+      <h1>Grammar Practice</h1>
+      <p class="muted">Enter your DeepSeek API key. It is stored only in this browser's localStorage and is never written into this file.</p>
+      <label class="field-label" for="apiKey">DeepSeek API key</label>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="sk-...">
+      <div class="row" style="margin-top:12px">
+        <button id="saveKey" class="primary" type="button">Save key</button>
+      </div>
+      <p class="tiny muted" style="margin-top:12px">This is a personal static app. Browser storage is convenient, not a secure secret vault.</p>
+    </section>
+
+    <section id="app" class="hidden">
+      <header class="topbar row between">
+        <div>
+          <h1>Grammar Practice</h1>
+          <div class="muted tiny">Select a subject, choose a mode, then tap a grammar cell.</div>
+        </div>
+        <div class="row">
+          <span id="tokenStats" class="tiny muted">Tokens: 0 in / 0 out</span>
+          <span id="todayStats" class="tiny muted">Today: 0 correct / 0 attempts</span>
+          <button id="viewNotes" type="button">Notes</button>
+          <button id="changeKey" type="button">Change API key</button>
+          <button id="clearProgress" type="button">Clear progress</button>
+        </div>
+      </header>
+
+      <section class="controls">
+        <div>
+          <label class="field-label" for="subject">Subject</label>
+          <select id="subject">
+            <option>I</option>
+            <option>You</option>
+            <option>He</option>
+            <option>She</option>
+            <option>It</option>
+            <option>We</option>
+            <option>They</option>
+          </select>
+        </div>
+        <div>
+          <span class="field-label">Mode</span>
+          <div class="mode" aria-label="Practice mode">
+            <button id="respondMode" class="active" type="button">Respond</button>
+            <button id="createMode" type="button">Create</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tense</th>
+              <th>Affirmative</th>
+              <th>Negative</th>
+              <th>Yes/No question</th>
+              <th>Negative question</th>
+              <th>WH-question</th>
+              <th>Negative WH</th>
+              <th>Tag question</th>
+            </tr>
+          </thead>
+          <tbody id="grammarBody"></tbody>
+        </table>
+      </div>
+
+      <dialog id="practiceDialog" class="practice-dialog">
+        <section id="workspace" class="workspace">
+          <div class="row between">
+            <div>
+              <div id="target" class="target"></div>
+              <div id="targetExample" class="tiny muted"></div>
+            </div>
+            <div class="row">
+              <button id="hintBtn" type="button">Hint</button>
+              <button id="newPrompt" class="hidden" type="button">New prompt</button>
+              <button id="closePractice" type="button">Close</button>
+            </div>
+          </div>
+
+          <div id="hint" class="hint hidden"></div>
+          <div id="loadingPrompt" class="spinner hidden">Creating a prompt...</div>
+          <div id="message" class="message hidden"></div>
+
+          <label id="answerLabel" class="field-label" for="answer">Your answer</label>
+          <textarea id="answer" placeholder="Type your answer here..."></textarea>
+
+          <div class="row mobile-stack" style="margin-top:10px">
+            <button id="check" class="primary" type="button">Check answer</button>
+            <button id="clearAnswer" type="button">Clear</button>
+            <span id="checking" class="spinner hidden">Checking...</span>
+          </div>
+
+          <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+
+          <div style="margin-top:12px">
+            <button id="takeNote" type="button">+ Take a note</button>
+          </div>
+        </section>
+      </dialog>
+
+      <dialog id="noteDialog" class="note-dialog">
+        <form id="noteForm" method="dialog">
+          <div class="row between" style="margin-bottom:10px">
+            <div>
+              <strong>Take a note</strong>
+              <div id="noteContext" class="tiny muted"></div>
+            </div>
+            <button id="closeNote" type="button">Close</button>
+          </div>
+
+          <label class="field-label" for="noteText">Note</label>
+          <textarea id="noteText" placeholder="Example: Use 'for' before exams: study for my college exams."></textarea>
+
+          <div class="row between" style="margin-top:10px">
+            <span id="noteStatus" class="tiny muted"></span>
+            <button id="saveNote" class="primary" type="submit">Save note</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="notesDialog" class="note-dialog notes-dialog">
+        <div class="row between" style="margin-bottom:12px">
+          <div>
+            <strong>Saved notes</strong>
+            <div id="notesCount" class="tiny muted"></div>
+          </div>
+          <button id="closeNotes" type="button">Close</button>
+        </div>
+        <div id="notesList" class="notes-list"></div>
+      </dialog>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const CONFIG = {
+      endpoint: "https://api.deepseek.com/chat/completions",
+      model: "deepseek-v4-flash"
+    };
+
+    const KEY_STORAGE = "grammarPractice.deepseekKey";
+    const PROGRESS_STORAGE = "grammarPractice.progress";
+    const HISTORY_STORAGE = "grammarPractice.history";
+    const DAILY_STATS_STORAGE = "grammarPractice.dailyStats";
+    const PROMPT_HISTORY_STORAGE = "grammarPractice.promptHistory";
+    const NOTES_STORAGE = "grammarPractice.notes";
+    const MODE_STORAGE = "grammarPractice.mode";
+
+    const FORMS = [
+      { id: "affirmative", label: "Affirmative" },
+      { id: "negative", label: "Negative" },
+      { id: "question", label: "Yes/No question" },
+      { id: "negativeQuestion", label: "Negative question" },
+      { id: "wh", label: "WH-question" },
+      { id: "negativeWh", label: "Negative WH-question" },
+      { id: "tag", label: "Tag question" }
+    ];
+
+    const TENSES = [
+      { id: "presentSimple", label: "Present Simple", priority: "high", structure: "base verb / do / does" },
+      { id: "presentContinuous", label: "Present Continuous", priority: "high", structure: "am/is/are + verb-ing" },
+      { id: "presentPerfect", label: "Present Perfect", priority: "high", structure: "have/has + past participle" },
+      { id: "presentPerfectContinuous", label: "Present Perfect Continuous", priority: "medium", structure: "have/has + been + verb-ing" },
+      { id: "pastSimple", label: "Past Simple", priority: "high", structure: "past verb / did" },
+      { id: "pastContinuous", label: "Past Continuous", priority: "medium", structure: "was/were + verb-ing" },
+      { id: "pastPerfect", label: "Past Perfect", priority: "medium", structure: "had + past participle" },
+      { id: "pastPerfectContinuous", label: "Past Perfect Continuous", priority: "low", structure: "had + been + verb-ing" },
+      { id: "futureSimple", label: "Future Simple", priority: "high", structure: "will + base verb" },
+      { id: "futureContinuous", label: "Future Continuous", priority: "medium", structure: "will + be + verb-ing" },
+      { id: "futurePerfect", label: "Future Perfect", priority: "low", structure: "will + have + past participle" },
+      { id: "futurePerfectContinuous", label: "Future Perfect Continuous", priority: "low", structure: "will + have + been + verb-ing" }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const setup = $("setup");
+    const app = $("app");
+    const subjectSelect = $("subject");
+    const grammarBody = $("grammarBody");
+    const workspace = $("workspace");
+    const practiceDialog = $("practiceDialog");
+    const target = $("target");
+    const targetExample = $("targetExample");
+    const hint = $("hint");
+    const hintBtn = $("hintBtn");
+    const message = $("message");
+    const answer = $("answer");
+    const feedback = $("feedback");
+    const checkBtn = $("check");
+    const newPromptBtn = $("newPrompt");
+    const loadingPrompt = $("loadingPrompt");
+    const checking = $("checking");
+    const respondModeBtn = $("respondMode");
+    const createModeBtn = $("createMode");
+    const takeNoteBtn = $("takeNote");
+    const noteDialog = $("noteDialog");
+    const noteForm = $("noteForm");
+    const noteText = $("noteText");
+    const noteContext = $("noteContext");
+    const noteStatus = $("noteStatus");
+    const notesDialog = $("notesDialog");
+    const notesList = $("notesList");
+    const notesCount = $("notesCount");
+
+    let mode = localStorage.getItem(MODE_STORAGE) === "create" ? "create" : "respond";
+    let selected = null;
+    let currentPrompt = null;
+    let awaitingNextQuestion = false;
+    let editingNoteId = null;
+    let sessionInputTokens = 0;
+    let sessionOutputTokens = 0;
+    let sessionCacheMissTokens = 0;
+
+    function getKey() {
+      return localStorage.getItem(KEY_STORAGE) || "";
+    }
+
+    function updateTokenStatsDisplay() {
+      $("tokenStats").textContent = `Tokens: ${sessionInputTokens.toLocaleString()} in / ${sessionOutputTokens.toLocaleString()} out / ${sessionCacheMissTokens.toLocaleString()} cache miss`;
+    }
+
+    function safeJsonParse(value, fallback) {
+      try { return JSON.parse(value); } catch { return fallback; }
+    }
+
+    function getProgress() {
+      const value = safeJsonParse(localStorage.getItem(PROGRESS_STORAGE), {});
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    }
+
+    function saveProgress(progress) {
+      localStorage.setItem(PROGRESS_STORAGE, JSON.stringify(progress));
+    }
+
+    function localDateKey(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function getDailyStats() {
+      const parsed = safeJsonParse(localStorage.getItem(DAILY_STATS_STORAGE), {});
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    }
+
+    function updateTodayStatsDisplay() {
+      const stats = getDailyStats();
+      const today = stats[localDateKey()] || { attempts: 0, correct: 0 };
+      $("todayStats").textContent = `Today: ${today.correct} correct / ${today.attempts} attempts`;
+    }
+
+    function recordDailyAttempt(valid) {
+      const stats = getDailyStats();
+      const key = localDateKey();
+      const today = stats[key] && typeof stats[key] === "object"
+        ? stats[key]
+        : { attempts: 0, correct: 0 };
+
+      today.attempts += 1;
+      if (valid) today.correct += 1;
+      stats[key] = today;
+
+      localStorage.setItem(DAILY_STATS_STORAGE, JSON.stringify(stats));
+      updateTodayStatsDisplay();
+    }
+
+    function getPromptHistory() {
+      const parsed = safeJsonParse(localStorage.getItem(PROMPT_HISTORY_STORAGE), {});
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    }
+
+    function recentPromptsForSelected() {
+      if (!selected) return [];
+      const all = getPromptHistory();
+      return Array.isArray(all[selectedKey()]) ? all[selectedKey()].slice(0, 6) : [];
+    }
+
+    function rememberPrompt(promptText) {
+      if (!selected || !promptText) return;
+      const all = getPromptHistory();
+      const key = selectedKey();
+      const existing = Array.isArray(all[key]) ? all[key] : [];
+      const normalized = promptText.trim();
+
+      all[key] = [
+        normalized,
+        ...existing.filter(item => item !== normalized)
+      ].slice(0, 6);
+
+      localStorage.setItem(PROMPT_HISTORY_STORAGE, JSON.stringify(all));
+    }
+
+    function getNotes() {
+      const parsed = safeJsonParse(localStorage.getItem(NOTES_STORAGE), []);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+
+    function openNoteDialog() {
+      if (!selected) return;
+
+      editingNoteId = null;
+      noteContext.textContent = `${selected.tense.label} · ${selected.subject} · ${selected.form.label}`;
+      noteText.value = "";
+      noteStatus.textContent = "";
+      $("saveNote").textContent = "Save note";
+
+      if (typeof noteDialog.showModal === "function") {
+        noteDialog.showModal();
+      } else {
+        noteDialog.setAttribute("open", "");
+      }
+
+      setTimeout(() => noteText.focus(), 0);
+    }
+
+    function closeNoteDialog() {
+      if (typeof noteDialog.close === "function") {
+        noteDialog.close();
+      } else {
+        noteDialog.removeAttribute("open");
+      }
+      editingNoteId = null;
+      $("saveNote").textContent = "Save note";
+    }
+
+    function saveCurrentNote() {
+      const text = noteText.value.trim();
+      if (!text) {
+        noteStatus.textContent = "Write a note first.";
+        return false;
+      }
+
+      const notes = getNotes();
+
+      if (editingNoteId) {
+        const index = notes.findIndex(note => note.id === editingNoteId);
+        if (index === -1) {
+          noteStatus.textContent = "Could not find that note.";
+          return false;
+        }
+
+        notes[index] = {
+          ...notes[index],
+          text,
+          updatedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem(NOTES_STORAGE, JSON.stringify(notes));
+        noteStatus.textContent = "Updated.";
+        editingNoteId = null;
+        $("saveNote").textContent = "Save note";
+        return true;
+      }
+
+      if (!selected) return false;
+
+      notes.unshift({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        at: new Date().toISOString(),
+        date: localDateKey(),
+        grammarKey: selectedKey(),
+        tense: selected.tense.label,
+        subject: selected.subject,
+        form: selected.form.label,
+        text
+      });
+
+      localStorage.setItem(NOTES_STORAGE, JSON.stringify(notes.slice(0, 500)));
+      noteStatus.textContent = "Saved.";
+      return true;
+    }
+
+    function formatNoteDate(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString();
+    }
+
+    function editNote(note) {
+      editingNoteId = note.id;
+      noteContext.textContent = `${note.tense || ""} · ${note.subject || ""} · ${note.form || ""}`;
+      noteText.value = note.text || "";
+      noteStatus.textContent = "";
+      $("saveNote").textContent = "Update note";
+
+      closeNotesDialog();
+
+      if (typeof noteDialog.showModal === "function") {
+        noteDialog.showModal();
+      } else {
+        noteDialog.setAttribute("open", "");
+      }
+
+      setTimeout(() => {
+        noteText.focus();
+        noteText.setSelectionRange(noteText.value.length, noteText.value.length);
+      }, 0);
+    }
+
+    function renderNotes() {
+      const notes = getNotes();
+      notesCount.textContent = `${notes.length} note${notes.length === 1 ? "" : "s"}`;
+      notesList.innerHTML = "";
+
+      if (!notes.length) {
+        notesList.innerHTML = '<div class="empty-notes">No saved notes yet.</div>';
+        return;
+      }
+
+      for (const note of notes) {
+        const item = document.createElement("div");
+        item.className = "note-item";
+
+        const meta = document.createElement("div");
+        meta.className = "tiny muted";
+        meta.textContent = `${note.tense || ""} · ${note.subject || ""} · ${note.form || ""} · ${formatNoteDate(note.at)}`;
+
+        const text = document.createElement("div");
+        text.className = "note-item-text";
+        text.textContent = note.text || "";
+
+        const actions = document.createElement("div");
+        actions.className = "row between";
+
+        const buttonGroup = document.createElement("div");
+        buttonGroup.className = "row";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => editNote(note));
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => {
+          const next = getNotes().filter(item => item.id !== note.id);
+          localStorage.setItem(NOTES_STORAGE, JSON.stringify(next));
+          renderNotes();
+        });
+
+        buttonGroup.appendChild(editBtn);
+        buttonGroup.appendChild(deleteBtn);
+
+        actions.appendChild(document.createElement("span"));
+        actions.appendChild(buttonGroup);
+
+        item.appendChild(meta);
+        item.appendChild(text);
+        item.appendChild(actions);
+        notesList.appendChild(item);
+      }
+    }
+
+    function openNotesDialog() {
+      renderNotes();
+
+      if (typeof notesDialog.showModal === "function") {
+        notesDialog.showModal();
+      } else {
+        notesDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeNotesDialog() {
+      if (typeof notesDialog.close === "function") {
+        notesDialog.close();
+      } else {
+        notesDialog.removeAttribute("open");
+      }
+    }
+
+    function recordAttempt(valid, result) {
+      if (!selected) return;
+      const key = selectedKey();
+      const progress = getProgress();
+      const entry = progress[key] || { attempts: 0, correct: 0 };
+      entry.attempts += 1;
+      if (valid) entry.correct += 1;
+      progress[key] = entry;
+      saveProgress(progress);
+
+      const parsedHistory = safeJsonParse(localStorage.getItem(HISTORY_STORAGE), []);
+      const history = Array.isArray(parsedHistory) ? parsedHistory : [];
+      history.unshift({
+        at: new Date().toISOString(),
+        key,
+        mode,
+        prompt: currentPrompt?.message || null,
+        answer: answer.value.trim(),
+        valid,
+        feedback: result?.feedback || ""
+      });
+      localStorage.setItem(HISTORY_STORAGE, JSON.stringify(history.slice(0, 100)));
+      recordDailyAttempt(valid);
+      renderTable();
+    }
+
+    function selectedKey() {
+      return [selected.tense.id, selected.subject, selected.form.id].join(":");
+    }
+
+    function isThirdSingular(subject) {
+      return subject === "He" || subject === "She" || subject === "It";
+    }
+
+    function bePresent(subject) {
+      if (subject === "I") return "am";
+      if (isThirdSingular(subject)) return "is";
+      return "are";
+    }
+
+    function bePast(subject) {
+      return (subject === "I" || isThirdSingular(subject)) ? "was" : "were";
+    }
+
+    function havePresent(subject) {
+      return isThirdSingular(subject) ? "has" : "have";
+    }
+
+    function doPresent(subject) {
+      return isThirdSingular(subject) ? "does" : "do";
+    }
+
+    function cap(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function contractNegative(aux) {
+      const map = {
+        "do": "don't", "does": "doesn't", "did": "didn't",
+        "is": "isn't", "are": "aren't", "was": "wasn't", "were": "weren't",
+        "have": "haven't", "has": "hasn't", "had": "hadn't",
+        "will": "won't"
+      };
+      return map[aux] || aux + " not";
+    }
+
+    function tenseParts(tenseId, subject) {
+      switch (tenseId) {
+        case "presentSimple":
+          return {
+            positive: isThirdSingular(subject) ? "works" : "work",
+            aux: doPresent(subject),
+            baseAfterAux: "work",
+            wh: subject === "It" ? "How" : "Where"
+          };
+        case "presentContinuous":
+          return { positive: bePresent(subject) + " working", aux: bePresent(subject), rest: "working", wh: subject === "It" ? "How" : "Where" };
+        case "presentPerfect":
+          return { positive: havePresent(subject) + " worked", aux: havePresent(subject), rest: "worked", wh: subject === "It" ? "How" : "Where" };
+        case "presentPerfectContinuous":
+          return { positive: havePresent(subject) + " been working", aux: havePresent(subject), rest: "been working", wh: "How long" };
+        case "pastSimple":
+          return { positive: "worked", aux: "did", baseAfterAux: "work", wh: subject === "It" ? "How" : "Where" };
+        case "pastContinuous":
+          return { positive: bePast(subject) + " working", aux: bePast(subject), rest: "working", wh: subject === "It" ? "How" : "Where" };
+        case "pastPerfect":
+          return { positive: "had worked", aux: "had", rest: "worked", wh: subject === "It" ? "How" : "Where" };
+        case "pastPerfectContinuous":
+          return { positive: "had been working", aux: "had", rest: "been working", wh: "How long" };
+        case "futureSimple":
+          return { positive: "will work", aux: "will", rest: "work", wh: subject === "It" ? "How" : "Where" };
+        case "futureContinuous":
+          return { positive: "will be working", aux: "will", rest: "be working", wh: subject === "It" ? "How" : "Where" };
+        case "futurePerfect":
+          return { positive: "will have worked", aux: "will", rest: "have worked", wh: subject === "It" ? "How" : "Where" };
+        case "futurePerfectContinuous":
+          return { positive: "will have been working", aux: "will", rest: "have been working", wh: "How long" };
+        default:
+          throw new Error("Unknown tense");
+      }
+    }
+
+    function exampleFor(tenseId, subject, formId) {
+      const p = tenseParts(tenseId, subject);
+      const s = subject;
+      const negativeAux = contractNegative(p.aux);
+
+      if (formId === "affirmative") return `${s} ${p.positive}.`;
+      if (formId === "negative") {
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${s} ${negativeAux} ${p.baseAfterAux}.`;
+        if (tenseId === "presentContinuous" && s === "I") return "I am not working.";
+        return `${s} ${negativeAux} ${p.rest}.`;
+      }
+      if (formId === "question") {
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} ${s.toLowerCase()} ${p.baseAfterAux}?`;
+        return `${cap(p.aux)} ${s.toLowerCase()} ${p.rest}?`;
+      }
+      if (formId === "negativeQuestion") {
+        if (tenseId === "presentContinuous" && s === "I") return "Aren't I working?";
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(negativeAux)} ${s.toLowerCase()} ${p.baseAfterAux}?`;
+        return `${cap(negativeAux)} ${s.toLowerCase()} ${p.rest}?`;
+      }
+      if (formId === "wh") {
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${p.wh} ${p.aux} ${s.toLowerCase()} ${p.baseAfterAux}?`;
+        return `${p.wh} ${p.aux} ${s.toLowerCase()} ${p.rest}?`;
+      }
+      if (formId === "negativeWh") {
+        const wh = "Why";
+        if (tenseId === "presentContinuous" && s === "I") return "Why aren't I working?";
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${wh} ${negativeAux} ${s.toLowerCase()} ${p.baseAfterAux}?`;
+        return `${wh} ${negativeAux} ${s.toLowerCase()} ${p.rest}?`;
+      }
+      if (formId === "tag") {
+        let tagAux = negativeAux;
+        if (tenseId === "presentContinuous" && s === "I") tagAux = "aren't";
+        return `${s} ${p.positive}, ${tagAux} ${s.toLowerCase()}?`;
+      }
+      return "";
+    }
+
+    function hintFor(tenseId, subject, formId) {
+      const p = tenseParts(tenseId, subject);
+      const S = subject;
+
+      if (formId === "affirmative") return `${S} + ${p.positive.replace("works", "verb-s").replace("work", "base verb").replace("worked", "past participle").replace("working", "verb-ing")}`;
+      if (formId === "negative") {
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${S} + ${contractNegative(p.aux)} + base verb`;
+        if (tenseId === "presentContinuous" && subject === "I") return "I + am not + verb-ing";
+        return `${S} + ${contractNegative(p.aux)} + ${p.rest.replace("worked", "past participle").replace("working", "verb-ing")}`;
+      }
+      if (formId === "question") {
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} + ${S.toLowerCase()} + base verb + ?`;
+        return `${cap(p.aux)} + ${S.toLowerCase()} + ${p.rest.replace("worked", "past participle").replace("working", "verb-ing")} + ?`;
+      }
+      if (formId === "negativeQuestion") {
+        const aux = tenseId === "presentContinuous" && subject === "I" ? "Aren't" : cap(contractNegative(p.aux));
+        const rest = (tenseId === "presentSimple" || tenseId === "pastSimple") ? "base verb" : p.rest.replace("worked", "past participle").replace("working", "verb-ing");
+        return `${aux} + ${S.toLowerCase()} + ${rest} + ?`;
+      }
+      if (formId === "wh") return `WH-word + auxiliary + ${S.toLowerCase()} + main verb/complement + ?`;
+      if (formId === "negativeWh") return `Why + negative auxiliary + ${S.toLowerCase()} + main verb/complement + ?`;
+      if (formId === "tag") return `Affirmative statement + negative auxiliary + ${S.toLowerCase()} + ?`;
+      return "";
+    }
+
+    function renderTable() {
+      const subject = subjectSelect.value;
+      const progress = getProgress();
+      const selectedKeyNow = selected ? selectedKey() : null;
+
+      grammarBody.innerHTML = "";
+      for (const tense of TENSES) {
+        const tr = document.createElement("tr");
+
+        const tenseTd = document.createElement("td");
+        tenseTd.className = "tense-cell";
+        tenseTd.innerHTML = `<strong>${tense.label}</strong><div class="tiny muted">${tense.structure}</div><span class="priority ${tense.priority}">${tense.priority} priority</span>`;
+        tr.appendChild(tenseTd);
+
+        for (const form of FORMS) {
+          const td = document.createElement("td");
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "grammar-cell";
+          const key = [tense.id, subject, form.id].join(":");
+          if (key === selectedKeyNow) btn.classList.add("selected");
+
+          const ex = exampleFor(tense.id, subject, form.id);
+          const stat = progress[key];
+          btn.innerHTML = `<div class="example">${ex}</div><div class="score">${stat ? `${stat.correct}/${stat.attempts} correct` : "Not practiced"}</div>`;
+          btn.addEventListener("click", () => selectCell(tense, form, subject));
+          td.appendChild(btn);
+          tr.appendChild(td);
+        }
+
+        grammarBody.appendChild(tr);
+      }
+    }
+
+    function setPrimaryAction(next) {
+      awaitingNextQuestion = next;
+      checkBtn.textContent = next ? "Next question" : "Check answer";
+      checkBtn.disabled = false;
+    }
+
+    function openPracticeDialog() {
+      if (typeof practiceDialog.showModal === "function") {
+        if (!practiceDialog.open) practiceDialog.showModal();
+      } else {
+        practiceDialog.setAttribute("open", "");
+      }
+    }
+
+    function closePracticeDialog() {
+      if (typeof practiceDialog.close === "function") {
+        practiceDialog.close();
+      } else {
+        practiceDialog.removeAttribute("open");
+      }
+    }
+
+    async function selectCell(tense, form, subject) {
+      selected = { tense, form, subject };
+      currentPrompt = null;
+      openPracticeDialog();
+      target.textContent = `${tense.label} · ${subject} · ${form.label}`;
+      targetExample.textContent = `Reference: ${exampleFor(tense.id, subject, form.id)}`;
+      hint.textContent = hintFor(tense.id, subject, form.id);
+      hint.classList.add("hidden");
+      feedback.classList.add("hidden");
+      setPrimaryAction(false);
+      answer.value = "";
+      renderTable();
+
+      if (mode === "respond") {
+        newPromptBtn.classList.remove("hidden");
+        await generatePrompt();
+      } else {
+        newPromptBtn.classList.add("hidden");
+        currentPrompt = null;
+        message.textContent = "";
+        message.classList.add("hidden");
+        loadingPrompt.classList.add("hidden");
+        $("answerLabel").textContent = "Your sentence";
+        answer.focus();
+      }
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      localStorage.setItem(MODE_STORAGE, mode);
+      respondModeBtn.classList.toggle("active", mode === "respond");
+      createModeBtn.classList.toggle("active", mode === "create");
+      feedback.classList.add("hidden");
+      hint.classList.add("hidden");
+      setPrimaryAction(false);
+      answer.value = "";
+
+      if (!selected) return;
+
+      if (mode === "respond") {
+        newPromptBtn.classList.remove("hidden");
+        generatePrompt();
+      } else {
+        newPromptBtn.classList.add("hidden");
+        currentPrompt = null;
+        message.textContent = "";
+        message.classList.add("hidden");
+        loadingPrompt.classList.add("hidden");
+        $("answerLabel").textContent = "Your sentence";
+        answer.focus();
+      }
+    }
+
+    async function deepSeekJson(messages, maxTokens = 450) {
+      const apiKey = getKey();
+      if (!apiKey) throw new Error("Missing API key.");
+
+      const response = await fetch(CONFIG.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: CONFIG.model,
+          thinking: { type: "disabled" },
+          messages,
+          response_format: { type: "json_object" },
+          max_tokens: maxTokens
+        })
+      });
+
+      const raw = await response.text();
+      if (!response.ok) {
+        let detail = raw;
+        try {
+          const parsed = JSON.parse(raw);
+          detail = parsed?.error?.message || raw;
+        } catch {}
+        throw new Error(`DeepSeek API error ${response.status}: ${detail}`);
+      }
+
+      let envelope;
+      try { envelope = JSON.parse(raw); }
+      catch { throw new Error("DeepSeek returned an unreadable response."); }
+
+      const usage = envelope?.usage || {};
+      const promptTokens = Number(usage.prompt_tokens || 0);
+      const completionTokens = Number(usage.completion_tokens || 0);
+      const cacheMissTokens = Number(usage.prompt_cache_miss_tokens || 0);
+
+      if (Number.isFinite(promptTokens) && promptTokens > 0) {
+        sessionInputTokens += promptTokens;
+      }
+      if (Number.isFinite(completionTokens) && completionTokens > 0) {
+        sessionOutputTokens += completionTokens;
+      }
+      if (Number.isFinite(cacheMissTokens) && cacheMissTokens > 0) {
+        sessionCacheMissTokens += cacheMissTokens;
+      }
+      updateTokenStatsDisplay();
+
+      const content = envelope?.choices?.[0]?.message?.content;
+      if (!content) throw new Error("DeepSeek returned no message content.");
+
+      try { return JSON.parse(content); }
+      catch { throw new Error("DeepSeek did not return valid JSON."); }
+    }
+
+    function browserApiError(error) {
+      const msg = String(error?.message || error);
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        return "The browser could not reach DeepSeek directly. This may be a network or CORS restriction. Your API key is still stored only in this browser.";
+      }
+      return msg;
+    }
+
+    async function generatePrompt() {
+      if (!selected || mode !== "respond") return;
+      message.classList.add("hidden");
+      feedback.classList.add("hidden");
+      setPrimaryAction(false);
+      loadingPrompt.classList.remove("hidden");
+      newPromptBtn.disabled = true;
+      answer.disabled = true;
+      checkBtn.disabled = true;
+      $("answerLabel").textContent = mode === "respond" ? "Your reply" : "Your sentence";
+
+      const reference = exampleFor(selected.tense.id, selected.subject, selected.form.id);
+      const system = mode === "respond"
+        ? `You create tiny English grammar conversation exercises.
+Return JSON only with exactly these keys:
+{"message":"...", "context":"..."}
+
+The learner must reply using the requested tense and sentence type.
+Write one short, natural message, usually 1 sentence and never more than 2.
+Do NOT mention grammar, tense names, or the reference sentence.
+Do NOT demand one exact answer. The situation should allow multiple semantically reasonable replies.
+Create a genuinely different scenario each time. Do not merely paraphrase a previous prompt.
+Vary the topic across work, home, travel, friends, plans, routines, technology, errands, food, hobbies, and everyday situations.
+For affirmative/negative targets, ask or say something that naturally invites that kind of statement.
+For yes/no question, negative question, WH-question, negative WH-question, or tag-question targets, create a situation that naturally makes the learner ASK that kind of question.
+The selected subject is reference information only. In conversation, allow the learner's pronoun to change naturally with speaker perspective. For example, if the message asks "What do you do?", an answer beginning with "I..." is expected and should not be treated as a subject mismatch.`
+        : `You create tiny English grammar creation exercises.
+Return JSON only with exactly these keys:
+{"message":"...", "context":"..."}
+
+Give the learner one short instruction that makes them CREATE their own sentence using the requested tense, exact subject, and sentence type.
+Do NOT provide the answer.
+Do NOT mention the reference sentence.
+The instruction should give a concrete topic or situation, such as work, home, travel, plans, technology, hobbies, errands, friends, food, or daily life.
+Create a materially different topic each time.
+Example style: "Write a sentence about something you do every morning." or "Write a sentence about a tool you use at work."
+Keep it to one short sentence.`;
+
+      const recentPrompts = recentPromptsForSelected();
+      const avoidText = recentPrompts.length
+        ? recentPrompts.map((p, i) => `${i + 1}. ${p}`).join("\n")
+        : "(none yet)";
+
+      const user = `Target tense: ${selected.tense.label}
+Target subject: ${selected.subject}
+Target sentence type: ${selected.form.label}
+Reference structure example: ${reference}
+
+Recent prompts for this exact grammar cell:
+${avoidText}
+
+Create a new prompt with a materially different topic and situation from every item above.`;
+
+      try {
+        currentPrompt = await deepSeekJson([
+          { role: "system", content: system },
+          { role: "user", content: user }
+        ], 220);
+
+        if (!currentPrompt?.message) throw new Error("Prompt generation returned no message.");
+        rememberPrompt(currentPrompt.message);
+        message.textContent = currentPrompt.message;
+        message.classList.remove("hidden");
+        answer.focus();
+      } catch (error) {
+        currentPrompt = {
+          message: `Write a natural reply that matches: ${selected.tense.label}, ${selected.subject}, ${selected.form.label}.`,
+          context: "Fallback prompt because AI prompt generation failed."
+        };
+        message.textContent = currentPrompt.message;
+        message.classList.remove("hidden");
+        showFeedback(false, browserApiError(error), null, false);
+      } finally {
+        loadingPrompt.classList.add("hidden");
+        newPromptBtn.disabled = false;
+        answer.disabled = false;
+        checkBtn.disabled = false;
+      }
+    }
+
+    async function checkAnswer() {
+      if (!selected) return;
+      const text = answer.value.trim();
+      if (!text) {
+        showFeedback(false, "Write an answer first.", null, false);
+        return;
+      }
+
+      checking.classList.remove("hidden");
+      checkBtn.disabled = true;
+      feedback.classList.add("hidden");
+
+      const promptText = mode === "respond" ? (currentPrompt?.message || "") : "";
+      const context = mode === "respond" ? (currentPrompt?.context || "") : "";
+      const reference = exampleFor(selected.tense.id, selected.subject, selected.form.id);
+
+      const system = `You are a strict but practical English grammar checker for one learner.
+Return JSON only with exactly these keys:
+{
+  "valid": true,
+  "grammarMatch": true,
+  "semanticFit": true,
+  "feedback": "short explanation",
+  "correction": null,
+  "detectedStructure": "short description"
+}
+
+Rules:
+- In Respond mode, judge the requested tense and sentence type, but DO NOT require the learner to literally use the selected subject pronoun. Pronouns should follow natural conversational perspective. Example: if the app asks "What do you usually do in the mornings?", "I brush my teeth." can be correct even when the selected table subject is "You".
+- In Create mode, require the requested tense, exact selected subject, and sentence type.
+- IMPORTANT: When the selected subject is "I", interpret the literal ASCII uppercase character I as the English first-person singular pronoun. Never interpret it as Turkish "ı" or as a foreign-language character. If the learner writes a normal English sentence such as "I love her hair.", that satisfies the subject requirement.
+- If detectedStructure shows the correct selected subject, do not mark the answer invalid for subject mismatch.
+- Accept contractions.
+- Accept many different vocabulary choices.
+- Do not reject a sentence merely because another wording sounds more native.
+- Reject real grammar errors or a mismatch with the target tense/sentence type.
+- In Respond mode, semanticFit means the answer is a plausible, coherent reply to the message. Multiple meanings can be valid unless they contradict explicit context.
+- In Create mode, semanticFit should be true as long as the sentence is coherent.
+- For question targets, the learner must produce a question of the requested type.
+- For tag-question targets, require a grammatically correct tag question.
+- Never produce a correction that fixes grammar by making the sentence semantically absurd or by assigning possessions/actions to the wrong speaker.
+- Keep feedback concise, ideally 1-2 sentences.
+- correction must be null when valid. If invalid, provide one corrected example that stays close to the learner's wording and preserves the intended meaning.`;
+
+      const user = `Mode: ${mode}
+Target tense: ${selected.tense.label}
+Target subject: ${selected.subject}
+Target sentence type: ${selected.form.label}
+Reference example: ${reference}
+Conversation message: ${promptText || "(none)"}
+Extra context: ${context || "(none)"}
+Learner answer: ${text}`;
+
+      try {
+        const result = await deepSeekJson([
+          { role: "system", content: system },
+          { role: "user", content: user }
+        ], 420);
+
+        const valid = Boolean(result.grammarMatch && (mode === "create" || result.semanticFit));
+        showFeedback(valid, result.feedback || (valid ? "Correct." : "Not quite."), result.correction, true, result.detectedStructure);
+        recordAttempt(valid, result);
+
+        setPrimaryAction(valid);
+      } catch (error) {
+        showFeedback(false, browserApiError(error), null, false);
+      } finally {
+        checking.classList.add("hidden");
+        checkBtn.disabled = false;
+      }
+    }
+
+    function showFeedback(valid, text, correction, judged = true, detectedStructure = "") {
+      feedback.className = "feedback " + (judged ? (valid ? "good" : "bad") : "");
+      const title = judged ? (valid ? "Correct" : "Try again") : "Could not check";
+      let html = `<div class="feedback-title">${escapeHtml(title)}</div><div>${escapeHtml(text)}</div>`;
+      if (correction) html += `<div style="margin-top:6px"><strong>Correction:</strong> ${escapeHtml(correction)}</div>`;
+      if (detectedStructure) html += `<div class="tiny muted" style="margin-top:6px">Detected: ${escapeHtml(detectedStructure)}</div>`;
+      feedback.innerHTML = html;
+      feedback.classList.remove("hidden");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function showSetup() {
+      setup.classList.remove("hidden");
+      app.classList.add("hidden");
+      $("apiKey").value = "";
+      $("apiKey").focus();
+    }
+
+    function showApp() {
+      setup.classList.add("hidden");
+      app.classList.remove("hidden");
+      respondModeBtn.classList.toggle("active", mode === "respond");
+      createModeBtn.classList.toggle("active", mode === "create");
+      updateTokenStatsDisplay();
+      updateTodayStatsDisplay();
+      renderTable();
+    }
+
+    $("saveKey").addEventListener("click", () => {
+      const key = $("apiKey").value.trim();
+      if (!key) return;
+      localStorage.setItem(KEY_STORAGE, key);
+      showApp();
+    });
+
+    $("apiKey").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") $("saveKey").click();
+    });
+
+    $("changeKey").addEventListener("click", showSetup);
+
+    $("clearProgress").addEventListener("click", () => {
+      if (!confirm("Clear all locally stored practice progress and history?")) return;
+      localStorage.removeItem(PROGRESS_STORAGE);
+      localStorage.removeItem(HISTORY_STORAGE);
+      localStorage.removeItem(DAILY_STATS_STORAGE);
+      localStorage.removeItem(PROMPT_HISTORY_STORAGE);
+      localStorage.removeItem(NOTES_STORAGE);
+      updateTodayStatsDisplay();
+      renderTable();
+      feedback.classList.add("hidden");
+    });
+
+    subjectSelect.addEventListener("change", () => {
+      if (selected) {
+        selected.subject = subjectSelect.value;
+        target.textContent = `${selected.tense.label} · ${selected.subject} · ${selected.form.label}`;
+        targetExample.textContent = `Reference: ${exampleFor(selected.tense.id, selected.subject, selected.form.id)}`;
+        hint.textContent = hintFor(selected.tense.id, selected.subject, selected.form.id);
+        feedback.classList.add("hidden");
+        if (mode === "respond") generatePrompt();
+      }
+      renderTable();
+    });
+
+    respondModeBtn.addEventListener("click", () => setMode("respond"));
+    createModeBtn.addEventListener("click", () => setMode("create"));
+
+    hintBtn.addEventListener("click", () => {
+      if (!selected) return;
+      hint.classList.toggle("hidden");
+    });
+
+    newPromptBtn.addEventListener("click", generatePrompt);
+
+    takeNoteBtn.addEventListener("click", openNoteDialog);
+
+    $("closePractice").addEventListener("click", closePracticeDialog);
+    $("closeNote").addEventListener("click", closeNoteDialog);
+    $("viewNotes").addEventListener("click", openNotesDialog);
+    $("closeNotes").addEventListener("click", closeNotesDialog);
+
+    noteForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (saveCurrentNote()) {
+        setTimeout(closeNoteDialog, 250);
+      }
+    });
+
+    practiceDialog.addEventListener("click", (event) => {
+      if (event.target === practiceDialog) closePracticeDialog();
+    });
+
+    noteDialog.addEventListener("click", (event) => {
+      if (event.target === noteDialog) closeNoteDialog();
+    });
+
+    notesDialog.addEventListener("click", (event) => {
+      if (event.target === notesDialog) closeNotesDialog();
+    });
+
+    checkBtn.addEventListener("click", async () => {
+      if (!awaitingNextQuestion) {
+        await checkAnswer();
+        return;
+      }
+
+      answer.value = "";
+      feedback.classList.add("hidden");
+      setPrimaryAction(false);
+
+      await generatePrompt();
+    });
+    $("clearAnswer").addEventListener("click", () => {
+      answer.value = "";
+      feedback.classList.add("hidden");
+      setPrimaryAction(false);
+      answer.focus();
+    });
+
+    answer.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        checkBtn.click();
+      }
+    });
+
+    if (getKey()) showApp();
+    else showSetup();
+  })();
+  </script>
+</body>
+</html>
