@@ -144,6 +144,20 @@
     }
     .priority.high { color: var(--good); }
     .priority.low { color: var(--warning); }
+    .tense-meta {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .tense-notes-btn {
+      padding: 1px 6px;
+      min-height: 0;
+      font-size: .68rem;
+      line-height: 1.4;
+      border-radius: 999px;
+    }
     .grammar-cell {
       width: 100%;
       min-width: 105px;
@@ -155,7 +169,42 @@
       background: transparent;
     }
     .grammar-cell:hover, .grammar-cell.selected { background: var(--panel); }
-    .example { font-size: .8rem; }
+    .example {
+      font-size: .8rem;
+    }
+    .example-scroll {
+      max-height: 4.65em;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      padding-right: 3px;
+    }
+    .example-sentence {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 1.55em;
+      padding: 1px 4px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .heat-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .heat-5 { background: color-mix(in srgb, var(--accent) 23%, transparent); }
+    .heat-5 .heat-dot { opacity: 1; }
+    .heat-4 { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    .heat-4 .heat-dot { opacity: .82; }
+    .heat-3 { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .heat-3 .heat-dot { opacity: .62; }
+    .heat-2 { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .heat-2 .heat-dot { opacity: .38; }
+    .heat-1 { background: transparent; }
+    .heat-1 .heat-dot { opacity: .16; }
     .score { font-size: .68rem; color: var(--muted); margin-top: 5px; }
     .workspace { margin-top: 0; }
     .practice-dialog {
@@ -180,6 +229,7 @@
       font-weight: 650;
       margin-bottom: 4px;
     }
+    #targetExample { white-space: pre-line; }
     .message {
       max-width: 680px;
       padding: 11px 13px;
@@ -248,6 +298,36 @@
       padding: 18px 0;
       text-align: center;
     }
+    .backup-dialog {
+      max-width: 620px;
+    }
+    .backup-info {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--panel);
+      margin-top: 10px;
+    }
+    .backup-info ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+    .backup-info li + li {
+      margin-top: 4px;
+    }
+    .backup-drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 18px 14px;
+      margin-top: 12px;
+      text-align: center;
+      background: var(--panel);
+      cursor: pointer;
+    }
+    .backup-drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--bg);
+    }
     @media (max-width: 680px) {
       .wrap { padding: 14px; }
       .controls { grid-template-columns: 1fr; }
@@ -279,6 +359,8 @@
           <span id="tokenStats" class="tiny muted">Tokens: 0 in / 0 out</span>
           <span id="todayStats" class="tiny muted">Today: 0 correct / 0 attempts</span>
           <button id="viewNotes" type="button">Notes</button>
+          <button id="backupData" type="button">Backup</button>
+          <input id="importFile" type="file" accept="application/json,.json" class="hidden">
           <button id="changeKey" type="button">Change API key</button>
           <button id="clearProgress" type="button">Clear progress</button>
         </div>
@@ -288,10 +370,12 @@
         <div>
           <label class="field-label" for="subject">Subject</label>
           <select id="subject">
+            <option value="[all]">All subjects</option>
             <option>I</option>
             <option>You</option>
             <option>He</option>
             <option>She</option>
+            <option value="[name]">[name] (any singular noun)</option>
             <option>It</option>
             <option>We</option>
             <option>They</option>
@@ -353,8 +437,9 @@
 
           <div id="feedback" class="feedback hidden" aria-live="polite"></div>
 
-          <div style="margin-top:12px">
+          <div class="row" style="margin-top:12px">
             <button id="takeNote" type="button">+ Take a note</button>
+            <button id="viewCellNotes" type="button">Cell notes</button>
           </div>
         </section>
       </dialog>
@@ -389,6 +474,87 @@
         </div>
         <div id="notesList" class="notes-list"></div>
       </dialog>
+
+      <dialog id="cellNotesDialog" class="note-dialog notes-dialog">
+        <div class="row between" style="margin-bottom:12px">
+          <div>
+            <strong>Cell notes</strong>
+            <div id="cellNotesContext" class="tiny muted"></div>
+          </div>
+          <button id="closeCellNotes" type="button">Close</button>
+        </div>
+        <div id="cellNotesList" class="notes-list"></div>
+      </dialog>
+
+      <dialog id="tenseNotesDialog" class="note-dialog notes-dialog">
+        <div class="row between" style="margin-bottom:12px">
+          <div>
+            <strong>Tense notes</strong>
+            <div id="tenseNotesContext" class="tiny muted"></div>
+          </div>
+          <button id="closeTenseNotes" type="button">Close</button>
+        </div>
+
+        <div class="panel" style="margin-bottom:12px">
+          <label class="field-label" for="tenseNoteText">Add a tense note</label>
+          <textarea id="tenseNoteText" placeholder="This note applies to the tense in general, not to one specific subject or sentence type."></textarea>
+          <div class="row between" style="margin-top:10px">
+            <span id="tenseNoteStatus" class="tiny muted"></span>
+            <button id="saveTenseNote" class="primary" type="button">Save tense note</button>
+          </div>
+        </div>
+
+        <div class="tiny muted" style="margin-bottom:8px">
+          This list includes tense-level notes plus notes from every subject and sentence-type cell under this tense.
+        </div>
+        <div id="tenseNotesList" class="notes-list"></div>
+      </dialog>
+
+      <dialog id="backupDialog" class="note-dialog backup-dialog">
+        <div class="row between" style="margin-bottom:12px">
+          <div>
+            <strong>Backup</strong>
+            <div class="tiny muted">Export or restore your locally saved learning data.</div>
+          </div>
+          <button id="closeBackup" type="button">Close</button>
+        </div>
+
+        <div class="backup-info">
+          <strong>Included in backup</strong>
+          <ul>
+            <li>Per-cell correctness progress</li>
+            <li>Practice attempt history</li>
+            <li>Daily correct / attempt counts</li>
+            <li>Recent prompt history used to avoid repeated questions</li>
+            <li>Saved notes, including edits and grammar context</li>
+            <li>Latest selected mode: Respond or Create</li>
+          </ul>
+        </div>
+
+        <div class="backup-info">
+          <strong>Not included</strong>
+          <ul>
+            <li>DeepSeek API key</li>
+            <li>Current session token counters</li>
+          </ul>
+        </div>
+
+        <div class="row mobile-stack" style="margin-top:14px">
+          <button id="exportData" class="primary" type="button">Export backup</button>
+          <button id="importData" type="button">Choose backup file</button>
+        </div>
+
+        <div id="backupDropZone" class="backup-drop-zone" tabindex="0">
+          <strong>Drop backup JSON here</strong>
+          <div class="tiny muted">or use “Choose backup file” above</div>
+        </div>
+
+        <div id="backupImportStatus" class="tiny muted" style="margin-top:10px"></div>
+
+        <div class="tiny muted" style="margin-top:12px">
+          Import replaces the included local data with the values from the selected backup file. Your API key is not changed.
+        </div>
+      </dialog>
     </section>
   </main>
 
@@ -408,6 +574,7 @@
     const PROMPT_HISTORY_STORAGE = "grammarPractice.promptHistory";
     const NOTES_STORAGE = "grammarPractice.notes";
     const MODE_STORAGE = "grammarPractice.mode";
+    const TOKEN_USAGE_STORAGE = "grammarPractice.tokenUsage";
 
     const FORMS = [
       { id: "affirmative", label: "Affirmative" },
@@ -463,12 +630,24 @@
     const notesDialog = $("notesDialog");
     const notesList = $("notesList");
     const notesCount = $("notesCount");
+    const cellNotesDialog = $("cellNotesDialog");
+    const cellNotesList = $("cellNotesList");
+    const cellNotesContext = $("cellNotesContext");
+    const tenseNotesDialog = $("tenseNotesDialog");
+    const tenseNotesList = $("tenseNotesList");
+    const tenseNotesContext = $("tenseNotesContext");
+    const tenseNoteText = $("tenseNoteText");
+    const tenseNoteStatus = $("tenseNoteStatus");
+    const backupDialog = $("backupDialog");
+    const backupDropZone = $("backupDropZone");
+    const backupImportStatus = $("backupImportStatus");
 
     let mode = localStorage.getItem(MODE_STORAGE) === "create" ? "create" : "respond";
     let selected = null;
     let currentPrompt = null;
     let awaitingNextQuestion = false;
     let editingNoteId = null;
+    let activeTenseForNotes = null;
     let sessionInputTokens = 0;
     let sessionOutputTokens = 0;
     let sessionCacheMissTokens = 0;
@@ -477,8 +656,34 @@
       return localStorage.getItem(KEY_STORAGE) || "";
     }
 
+    function getTokenUsageStore() {
+      const parsed = safeJsonParse(localStorage.getItem(TOKEN_USAGE_STORAGE), {});
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    }
+
+    function loadTodayTokenUsage() {
+      const store = getTokenUsageStore();
+      const today = store[localDateKey()] || {};
+      sessionInputTokens = Number(today.input || 0);
+      sessionOutputTokens = Number(today.output || 0);
+      sessionCacheMissTokens = Number(today.cacheMiss || 0);
+    }
+
+    function saveTodayTokenUsage() {
+      const store = getTokenUsageStore();
+      store[localDateKey()] = {
+        input: sessionInputTokens,
+        output: sessionOutputTokens,
+        cacheMiss: sessionCacheMissTokens
+      };
+      localStorage.setItem(TOKEN_USAGE_STORAGE, JSON.stringify(store));
+    }
+
     function updateTokenStatsDisplay() {
-      $("tokenStats").textContent = `Tokens: ${sessionInputTokens.toLocaleString()} in / ${sessionOutputTokens.toLocaleString()} out / ${sessionCacheMissTokens.toLocaleString()} cache miss`;
+      $("tokenStats").textContent =
+        `Tokens today: ${sessionInputTokens.toLocaleString()} in / ` +
+        `${sessionOutputTokens.toLocaleString()} out / ` +
+        `${sessionCacheMissTokens.toLocaleString()} cache miss`;
     }
 
     function safeJsonParse(value, fallback) {
@@ -733,6 +938,247 @@
       }
     }
 
+    function renderCellNotes() {
+      cellNotesList.innerHTML = "";
+
+      if (!selected) {
+        cellNotesContext.textContent = "";
+        cellNotesList.innerHTML = '<div class="empty-notes">No grammar cell selected.</div>';
+        return;
+      }
+
+      const notes = getNotes().filter(note => note.grammarKey === selectedKey());
+      cellNotesContext.textContent = `${selected.tense.label} · ${displaySubject(selected.subject)} · ${selected.form.label} · ${notes.length} note${notes.length === 1 ? "" : "s"}`;
+
+      if (!notes.length) {
+        cellNotesList.innerHTML = '<div class="empty-notes">No notes saved for this cell yet.</div>';
+        return;
+      }
+
+      for (const note of notes) {
+        const item = document.createElement("div");
+        item.className = "note-item";
+
+        const meta = document.createElement("div");
+        meta.className = "tiny muted";
+        meta.textContent = formatNoteDate(note.at);
+
+        const text = document.createElement("div");
+        text.className = "note-item-text";
+        text.textContent = note.text || "";
+
+        const actions = document.createElement("div");
+        actions.className = "row";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          closeCellNotesDialog();
+          editNote(note);
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => {
+          localStorage.setItem(NOTES_STORAGE, JSON.stringify(getNotes().filter(item => item.id !== note.id)));
+          renderCellNotes();
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        item.appendChild(meta);
+        item.appendChild(text);
+        item.appendChild(actions);
+        cellNotesList.appendChild(item);
+      }
+    }
+
+    function openCellNotesDialog() {
+      renderCellNotes();
+      if (typeof cellNotesDialog.showModal === "function") {
+        cellNotesDialog.showModal();
+      } else {
+        cellNotesDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeCellNotesDialog() {
+      if (typeof cellNotesDialog.close === "function") {
+        cellNotesDialog.close();
+      } else {
+        cellNotesDialog.removeAttribute("open");
+      }
+    }
+
+    function tenseNoteKey(tenseId) {
+      return `tense:${tenseId}`;
+    }
+
+    function notesForTense(tense) {
+      return getNotes().filter(note => {
+        if (note.scope === "tense" && note.tenseId === tense.id) return true;
+        if (note.grammarKey === tenseNoteKey(tense.id)) return true;
+        return typeof note.grammarKey === "string" && note.grammarKey.startsWith(`${tense.id}:`);
+      });
+    }
+
+    function saveTenseNote() {
+      if (!activeTenseForNotes) return;
+
+      const text = tenseNoteText.value.trim();
+      if (!text) {
+        tenseNoteStatus.textContent = "Write a note first.";
+        return;
+      }
+
+      const notes = getNotes();
+      notes.unshift({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        at: new Date().toISOString(),
+        date: localDateKey(),
+        scope: "tense",
+        tenseId: activeTenseForNotes.id,
+        grammarKey: tenseNoteKey(activeTenseForNotes.id),
+        tense: activeTenseForNotes.label,
+        subject: "",
+        form: "",
+        text
+      });
+
+      localStorage.setItem(NOTES_STORAGE, JSON.stringify(notes.slice(0, 500)));
+      tenseNoteText.value = "";
+      tenseNoteStatus.textContent = "Saved.";
+      renderTenseNotes();
+    }
+
+    function renderTenseNotes() {
+      tenseNotesList.innerHTML = "";
+
+      if (!activeTenseForNotes) {
+        tenseNotesContext.textContent = "";
+        tenseNotesList.innerHTML = '<div class="empty-notes">No tense selected.</div>';
+        return;
+      }
+
+      const notes = notesForTense(activeTenseForNotes);
+      const tenseOnlyCount = notes.filter(note =>
+        note.scope === "tense" || note.grammarKey === tenseNoteKey(activeTenseForNotes.id)
+      ).length;
+      const cellCount = notes.length - tenseOnlyCount;
+
+      tenseNotesContext.textContent =
+        `${activeTenseForNotes.label} · ${tenseOnlyCount} tense note${tenseOnlyCount === 1 ? "" : "s"} · ${cellCount} cell note${cellCount === 1 ? "" : "s"}`;
+
+      if (!notes.length) {
+        tenseNotesList.innerHTML = '<div class="empty-notes">No notes saved for this tense yet.</div>';
+        return;
+      }
+
+      for (const note of notes) {
+        const item = document.createElement("div");
+        item.className = "note-item";
+
+        const isTenseOnly = note.scope === "tense" || note.grammarKey === tenseNoteKey(activeTenseForNotes.id);
+
+        const meta = document.createElement("div");
+        meta.className = "tiny muted";
+        meta.textContent = isTenseOnly
+          ? `Tense note · ${formatNoteDate(note.at)}`
+          : `${note.subject || ""} · ${note.form || ""} · ${formatNoteDate(note.at)}`;
+
+        const text = document.createElement("div");
+        text.className = "note-item-text";
+        text.textContent = note.text || "";
+
+        const actions = document.createElement("div");
+        actions.className = "row";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => {
+          if (isTenseOnly) {
+            const updated = prompt("Edit tense note:", note.text || "");
+            if (updated === null) return;
+            const trimmed = updated.trim();
+            if (!trimmed) return;
+
+            const all = getNotes();
+            const index = all.findIndex(item => item.id === note.id);
+            if (index !== -1) {
+              all[index] = { ...all[index], text: trimmed, updatedAt: new Date().toISOString() };
+              localStorage.setItem(NOTES_STORAGE, JSON.stringify(all));
+              renderTenseNotes();
+            }
+          } else {
+            closeTenseNotesDialog();
+            editNote(note);
+          }
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => {
+          localStorage.setItem(
+            NOTES_STORAGE,
+            JSON.stringify(getNotes().filter(item => item.id !== note.id))
+          );
+          renderTenseNotes();
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+
+        item.appendChild(meta);
+        item.appendChild(text);
+        item.appendChild(actions);
+        tenseNotesList.appendChild(item);
+      }
+    }
+
+    function openTenseNotesDialog(tense) {
+      activeTenseForNotes = tense;
+      tenseNoteText.value = "";
+      tenseNoteStatus.textContent = "";
+      renderTenseNotes();
+
+      if (typeof tenseNotesDialog.showModal === "function") {
+        tenseNotesDialog.showModal();
+      } else {
+        tenseNotesDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeTenseNotesDialog() {
+      if (typeof tenseNotesDialog.close === "function") {
+        tenseNotesDialog.close();
+      } else {
+        tenseNotesDialog.removeAttribute("open");
+      }
+      tenseNoteStatus.textContent = "";
+    }
+
+    function openBackupDialog() {
+      backupImportStatus.textContent = "";
+      backupDropZone.classList.remove("dragover");
+      if (typeof backupDialog.showModal === "function") {
+        backupDialog.showModal();
+      } else {
+        backupDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeBackupDialog() {
+      if (typeof backupDialog.close === "function") {
+        backupDialog.close();
+      } else {
+        backupDialog.removeAttribute("open");
+      }
+    }
+
     function recordAttempt(valid, result) {
       if (!selected) return;
       const key = selectedKey();
@@ -764,7 +1210,7 @@
     }
 
     function isThirdSingular(subject) {
-      return subject === "He" || subject === "She" || subject === "It";
+      return subject === "He" || subject === "She" || subject === "It" || subject === "[name]";
     }
 
     function bePresent(subject) {
@@ -787,6 +1233,105 @@
 
     function cap(s) {
       return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    const ALL_SUBJECTS = ["I", "You", "He", "She", "It", "We", "They", "[name]"];
+
+    function isAllSubjects(subject) {
+      return subject === "[all]";
+    }
+
+    function displaySubject(subject) {
+      return subject === "[all]" ? "All subjects" : subject;
+    }
+
+    const TENSE_USAGE_WEIGHT = {
+      presentSimple: 1.00,
+      presentContinuous: 0.92,
+      pastSimple: 0.90,
+      futureSimple: 0.82,
+      presentPerfect: 0.78,
+      pastContinuous: 0.68,
+      presentPerfectContinuous: 0.58,
+      pastPerfect: 0.56,
+      futureContinuous: 0.50,
+      pastPerfectContinuous: 0.34,
+      futurePerfect: 0.28,
+      futurePerfectContinuous: 0.18
+    };
+
+    const FORM_USAGE_WEIGHT = {
+      affirmative: 1.00,
+      negative: 0.90,
+      question: 0.88,
+      wh: 0.82,
+      negativeQuestion: 0.62,
+      tag: 0.58,
+      negativeWh: 0.46
+    };
+
+    function usageHeatLevel(tenseId, formId) {
+      const score =
+        (TENSE_USAGE_WEIGHT[tenseId] ?? 0.5) *
+        (FORM_USAGE_WEIGHT[formId] ?? 0.5);
+
+      if (score >= 0.82) return 5;
+      if (score >= 0.64) return 4;
+      if (score >= 0.46) return 3;
+      if (score >= 0.28) return 2;
+      return 1;
+    }
+
+    function makeExamplePreview(examples, tenseId, formId, scrollable = false) {
+      const wrap = document.createElement("div");
+      wrap.className = scrollable ? "example example-scroll" : "example";
+      const heat = usageHeatLevel(tenseId, formId);
+
+      for (const sentence of examples) {
+        const row = document.createElement("div");
+        row.className = `example-sentence heat-${heat}`;
+        row.title = `Usage heat: ${heat}/5`;
+
+        const dot = document.createElement("span");
+        dot.className = "heat-dot";
+        dot.setAttribute("aria-hidden", "true");
+
+        const text = document.createElement("span");
+        text.textContent = sentence;
+
+        row.appendChild(dot);
+        row.appendChild(text);
+        wrap.appendChild(row);
+      }
+
+      return wrap;
+    }
+
+    function subjectForQuestion(subject) {
+      return subject === "[name]" ? "[name]" : subject.toLowerCase();
+    }
+
+    function tagPronoun(subject) {
+      return subject === "[name]" ? "they" : subject.toLowerCase();
+    }
+
+    function tagAuxFor(tenseId, subject, defaultNegativeAux) {
+      if (subject !== "[name]") return defaultNegativeAux;
+      const map = {
+        presentSimple: "don't",
+        presentContinuous: "aren't",
+        presentPerfect: "haven't",
+        presentPerfectContinuous: "haven't",
+        pastSimple: "didn't",
+        pastContinuous: "weren't",
+        pastPerfect: "hadn't",
+        pastPerfectContinuous: "hadn't",
+        futureSimple: "won't",
+        futureContinuous: "won't",
+        futurePerfect: "won't",
+        futurePerfectContinuous: "won't"
+      };
+      return map[tenseId] || defaultNegativeAux;
     }
 
     function contractNegative(aux) {
@@ -836,6 +1381,10 @@
     }
 
     function exampleFor(tenseId, subject, formId) {
+      if (isAllSubjects(subject)) {
+        return ALL_SUBJECTS.map(item => exampleFor(tenseId, item, formId)).join("\n");
+      }
+
       const p = tenseParts(tenseId, subject);
       const s = subject;
       const negativeAux = contractNegative(p.aux);
@@ -847,33 +1396,38 @@
         return `${s} ${negativeAux} ${p.rest}.`;
       }
       if (formId === "question") {
-        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} ${s.toLowerCase()} ${p.baseAfterAux}?`;
-        return `${cap(p.aux)} ${s.toLowerCase()} ${p.rest}?`;
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} ${subjectForQuestion(s)} ${p.baseAfterAux}?`;
+        return `${cap(p.aux)} ${subjectForQuestion(s)} ${p.rest}?`;
       }
       if (formId === "negativeQuestion") {
         if (tenseId === "presentContinuous" && s === "I") return "Aren't I working?";
-        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(negativeAux)} ${s.toLowerCase()} ${p.baseAfterAux}?`;
-        return `${cap(negativeAux)} ${s.toLowerCase()} ${p.rest}?`;
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(negativeAux)} ${subjectForQuestion(s)} ${p.baseAfterAux}?`;
+        return `${cap(negativeAux)} ${subjectForQuestion(s)} ${p.rest}?`;
       }
       if (formId === "wh") {
-        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${p.wh} ${p.aux} ${s.toLowerCase()} ${p.baseAfterAux}?`;
-        return `${p.wh} ${p.aux} ${s.toLowerCase()} ${p.rest}?`;
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${p.wh} ${p.aux} ${subjectForQuestion(s)} ${p.baseAfterAux}?`;
+        return `${p.wh} ${p.aux} ${subjectForQuestion(s)} ${p.rest}?`;
       }
       if (formId === "negativeWh") {
         const wh = "Why";
         if (tenseId === "presentContinuous" && s === "I") return "Why aren't I working?";
-        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${wh} ${negativeAux} ${s.toLowerCase()} ${p.baseAfterAux}?`;
-        return `${wh} ${negativeAux} ${s.toLowerCase()} ${p.rest}?`;
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${wh} ${negativeAux} ${subjectForQuestion(s)} ${p.baseAfterAux}?`;
+        return `${wh} ${negativeAux} ${subjectForQuestion(s)} ${p.rest}?`;
       }
       if (formId === "tag") {
         let tagAux = negativeAux;
         if (tenseId === "presentContinuous" && s === "I") tagAux = "aren't";
-        return `${s} ${p.positive}, ${tagAux} ${s.toLowerCase()}?`;
+        tagAux = tagAuxFor(tenseId, s, tagAux);
+        return `${s} ${p.positive}, ${tagAux} ${tagPronoun(s)}?`;
       }
       return "";
     }
 
     function hintFor(tenseId, subject, formId) {
+      if (isAllSubjects(subject)) {
+        return "Use any subject: I / you / he / she / it / we / they / any singular noun. Apply the correct auxiliary or verb form for each subject.";
+      }
+
       const p = tenseParts(tenseId, subject);
       const S = subject;
 
@@ -884,17 +1438,17 @@
         return `${S} + ${contractNegative(p.aux)} + ${p.rest.replace("worked", "past participle").replace("working", "verb-ing")}`;
       }
       if (formId === "question") {
-        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} + ${S.toLowerCase()} + base verb + ?`;
-        return `${cap(p.aux)} + ${S.toLowerCase()} + ${p.rest.replace("worked", "past participle").replace("working", "verb-ing")} + ?`;
+        if (tenseId === "presentSimple" || tenseId === "pastSimple") return `${cap(p.aux)} + ${subjectForQuestion(S)} + base verb + ?`;
+        return `${cap(p.aux)} + ${subjectForQuestion(S)} + ${p.rest.replace("worked", "past participle").replace("working", "verb-ing")} + ?`;
       }
       if (formId === "negativeQuestion") {
         const aux = tenseId === "presentContinuous" && subject === "I" ? "Aren't" : cap(contractNegative(p.aux));
         const rest = (tenseId === "presentSimple" || tenseId === "pastSimple") ? "base verb" : p.rest.replace("worked", "past participle").replace("working", "verb-ing");
-        return `${aux} + ${S.toLowerCase()} + ${rest} + ?`;
+        return `${aux} + ${subjectForQuestion(S)} + ${rest} + ?`;
       }
-      if (formId === "wh") return `WH-word + auxiliary + ${S.toLowerCase()} + main verb/complement + ?`;
-      if (formId === "negativeWh") return `Why + negative auxiliary + ${S.toLowerCase()} + main verb/complement + ?`;
-      if (formId === "tag") return `Affirmative statement + negative auxiliary + ${S.toLowerCase()} + ?`;
+      if (formId === "wh") return `WH-word + auxiliary + ${subjectForQuestion(S)} + main verb/complement + ?`;
+      if (formId === "negativeWh") return `Why + negative auxiliary + ${subjectForQuestion(S)} + main verb/complement + ?`;
+      if (formId === "tag") return `Affirmative statement + negative auxiliary + ${tagPronoun(S)} + ?`;
       return "";
     }
 
@@ -909,7 +1463,36 @@
 
         const tenseTd = document.createElement("td");
         tenseTd.className = "tense-cell";
-        tenseTd.innerHTML = `<strong>${tense.label}</strong><div class="tiny muted">${tense.structure}</div><span class="priority ${tense.priority}">${tense.priority} priority</span>`;
+
+        const tenseTitle = document.createElement("strong");
+        tenseTitle.textContent = tense.label;
+
+        const tenseStructure = document.createElement("div");
+        tenseStructure.className = "tiny muted";
+        tenseStructure.textContent = tense.structure;
+
+        const tenseMeta = document.createElement("div");
+        tenseMeta.className = "tense-meta";
+
+        const priorityBadge = document.createElement("span");
+        priorityBadge.className = `priority ${tense.priority}`;
+        priorityBadge.textContent = `${tense.priority} priority`;
+
+        const tenseNotesBtn = document.createElement("button");
+        tenseNotesBtn.type = "button";
+        tenseNotesBtn.className = "tense-notes-btn";
+        tenseNotesBtn.textContent = "Cell Notes";
+        tenseNotesBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openTenseNotesDialog(tense);
+        });
+
+        tenseMeta.appendChild(priorityBadge);
+        tenseMeta.appendChild(tenseNotesBtn);
+
+        tenseTd.appendChild(tenseTitle);
+        tenseTd.appendChild(tenseStructure);
+        tenseTd.appendChild(tenseMeta);
         tr.appendChild(tenseTd);
 
         for (const form of FORMS) {
@@ -921,8 +1504,21 @@
           if (key === selectedKeyNow) btn.classList.add("selected");
 
           const ex = exampleFor(tense.id, subject, form.id);
+          const sentences = isAllSubjects(subject) ? ex.split("\n") : [ex];
           const stat = progress[key];
-          btn.innerHTML = `<div class="example">${ex}</div><div class="score">${stat ? `${stat.correct}/${stat.attempts} correct` : "Not practiced"}</div>`;
+
+          btn.textContent = "";
+          btn.appendChild(
+            makeExamplePreview(sentences, tense.id, form.id, isAllSubjects(subject))
+          );
+
+          const score = document.createElement("div");
+          score.className = "score";
+          score.textContent = stat
+            ? `${stat.correct}/${stat.attempts} correct`
+            : "Not practiced";
+          btn.appendChild(score);
+
           btn.addEventListener("click", () => selectCell(tense, form, subject));
           td.appendChild(btn);
           tr.appendChild(td);
@@ -958,8 +1554,11 @@
       selected = { tense, form, subject };
       currentPrompt = null;
       openPracticeDialog();
-      target.textContent = `${tense.label} · ${subject} · ${form.label}`;
-      targetExample.textContent = `Reference: ${exampleFor(tense.id, subject, form.id)}`;
+      target.textContent = `${tense.label} · ${displaySubject(subject)} · ${form.label}`;
+      const referenceText = exampleFor(tense.id, subject, form.id);
+      targetExample.textContent = isAllSubjects(subject)
+        ? "Reference: I, You, He, She, It, We, They, [name]"
+        : `Reference: ${referenceText}`;
       hint.textContent = hintFor(tense.id, subject, form.id);
       hint.classList.add("hidden");
       feedback.classList.add("hidden");
@@ -1041,19 +1640,39 @@
       catch { throw new Error("DeepSeek returned an unreadable response."); }
 
       const usage = envelope?.usage || {};
-      const promptTokens = Number(usage.prompt_tokens || 0);
-      const completionTokens = Number(usage.completion_tokens || 0);
-      const cacheMissTokens = Number(usage.prompt_cache_miss_tokens || 0);
 
-      if (Number.isFinite(promptTokens) && promptTokens > 0) {
+      const promptTokens = Number(
+        usage.prompt_tokens ?? usage.input_tokens ?? 0
+      );
+      const completionTokens = Number(
+        usage.completion_tokens ?? usage.output_tokens ?? 0
+      );
+
+      const explicitCacheMiss = Number(usage.prompt_cache_miss_tokens);
+      const cacheHitTokens = Number(
+        usage.prompt_cache_hit_tokens ??
+        usage.input_tokens_details?.cached_tokens
+      );
+
+      let cacheMissTokens = explicitCacheMiss;
+      if (!Number.isFinite(cacheMissTokens)) {
+        cacheMissTokens =
+          Number.isFinite(promptTokens) && Number.isFinite(cacheHitTokens)
+            ? Math.max(0, promptTokens - cacheHitTokens)
+            : 0;
+      }
+
+      if (Number.isFinite(promptTokens) && promptTokens >= 0) {
         sessionInputTokens += promptTokens;
       }
-      if (Number.isFinite(completionTokens) && completionTokens > 0) {
+      if (Number.isFinite(completionTokens) && completionTokens >= 0) {
         sessionOutputTokens += completionTokens;
       }
-      if (Number.isFinite(cacheMissTokens) && cacheMissTokens > 0) {
+      if (Number.isFinite(cacheMissTokens) && cacheMissTokens >= 0) {
         sessionCacheMissTokens += cacheMissTokens;
       }
+
+      saveTodayTokenUsage();
       updateTokenStatsDisplay();
 
       const content = envelope?.choices?.[0]?.message?.content;
@@ -1096,6 +1715,8 @@ Create a genuinely different scenario each time. Do not merely paraphrase a prev
 Vary the topic across work, home, travel, friends, plans, routines, technology, errands, food, hobbies, and everyday situations.
 For affirmative/negative targets, ask or say something that naturally invites that kind of statement.
 For yes/no question, negative question, WH-question, negative WH-question, or tag-question targets, create a situation that naturally makes the learner ASK that kind of question.
+If the selected subject is "[name]", it represents any singular noun phrase, such as Jake, the app, the server, my brother, or a dog, and should follow third-person singular grammar.
+If the selected subject is "[all]", there is no fixed subject requirement; create a natural situation where any appropriate subject may be used.
 The selected subject is reference information only. In conversation, allow the learner's pronoun to change naturally with speaker perspective. For example, if the message asks "What do you do?", an answer beginning with "I..." is expected and should not be treated as a subject mismatch.`
         : `You create tiny English grammar creation exercises.
 Return JSON only with exactly these keys:
@@ -1107,6 +1728,7 @@ Do NOT mention the reference sentence.
 The instruction should give a concrete topic or situation, such as work, home, travel, plans, technology, hobbies, errands, friends, food, or daily life.
 Create a materially different topic each time.
 Example style: "Write a sentence about something you do every morning." or "Write a sentence about a tool you use at work."
+If the selected subject is "[name]", it means any singular noun phrase, such as Jake, the app, the server, my brother, or a dog.
 Keep it to one short sentence.`;
 
       const recentPrompts = recentPromptsForSelected();
@@ -1115,7 +1737,7 @@ Keep it to one short sentence.`;
         : "(none yet)";
 
       const user = `Target tense: ${selected.tense.label}
-Target subject: ${selected.subject}
+Target subject: ${selected.subject === "[all]" ? "[all] (any subject)" : selected.subject}
 Target sentence type: ${selected.form.label}
 Reference structure example: ${reference}
 
@@ -1181,6 +1803,8 @@ Return JSON only with exactly these keys:
 Rules:
 - In Respond mode, judge the requested tense and sentence type, but DO NOT require the learner to literally use the selected subject pronoun. Pronouns should follow natural conversational perspective. Example: if the app asks "What do you usually do in the mornings?", "I brush my teeth." can be correct even when the selected table subject is "You".
 - In Create mode, require the requested tense, exact selected subject, and sentence type.
+- When the selected subject is "[all]", do NOT require one exact subject. Accept any of these subjects: I, you, he, she, it, we, they, or any singular noun phrase represented by "[name]". The learner may provide either one valid sentence or multiple sentences. If multiple sentences are provided, every sentence must match the requested tense and sentence type and use a grammatically correct subject/auxiliary combination.
+- When the selected subject is "[name]", treat it as a placeholder for ANY singular noun phrase, not just a person's name. Accept examples such as "Jake", "Sarah", "the app", "the server", "my brother", "a dog", or "the application". Apply third-person singular grammar rules (works, does, is, has, was, etc.). Do NOT require the literal text "[name]".
 - IMPORTANT: When the selected subject is "I", interpret the literal ASCII uppercase character I as the English first-person singular pronoun. Never interpret it as Turkish "ı" or as a foreign-language character. If the learner writes a normal English sentence such as "I love her hair.", that satisfies the subject requirement.
 - If detectedStructure shows the correct selected subject, do not mark the answer invalid for subject mismatch.
 - Accept contractions.
@@ -1197,7 +1821,7 @@ Rules:
 
       const user = `Mode: ${mode}
 Target tense: ${selected.tense.label}
-Target subject: ${selected.subject}
+Target subject: ${selected.subject === "[all]" ? "[all] (any subject)" : selected.subject}
 Target sentence type: ${selected.form.label}
 Reference example: ${reference}
 Conversation message: ${promptText || "(none)"}
@@ -1242,6 +1866,131 @@ Learner answer: ${text}`;
         .replaceAll("'", "&#039;");
     }
 
+    function exportAppData() {
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {
+          progress: safeJsonParse(localStorage.getItem(PROGRESS_STORAGE), {}),
+          history: safeJsonParse(localStorage.getItem(HISTORY_STORAGE), []),
+          dailyStats: safeJsonParse(localStorage.getItem(DAILY_STATS_STORAGE), {}),
+          promptHistory: safeJsonParse(localStorage.getItem(PROMPT_HISTORY_STORAGE), {}),
+          notes: safeJsonParse(localStorage.getItem(NOTES_STORAGE), []),
+          mode: localStorage.getItem(MODE_STORAGE) || "respond"
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `grammar-practice-backup-${localDateKey()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function backupCounts(data) {
+      const progressCount = data?.progress && typeof data.progress === "object" && !Array.isArray(data.progress)
+        ? Object.keys(data.progress).length
+        : 0;
+      const historyCount = Array.isArray(data?.history) ? data.history.length : 0;
+      const dailyCount = data?.dailyStats && typeof data.dailyStats === "object" && !Array.isArray(data.dailyStats)
+        ? Object.keys(data.dailyStats).length
+        : 0;
+      const promptCellCount = data?.promptHistory && typeof data.promptHistory === "object" && !Array.isArray(data.promptHistory)
+        ? Object.keys(data.promptHistory).length
+        : 0;
+      const promptCount = data?.promptHistory && typeof data.promptHistory === "object" && !Array.isArray(data.promptHistory)
+        ? Object.values(data.promptHistory).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 0), 0)
+        : 0;
+      const notesCount = Array.isArray(data?.notes) ? data.notes.length : 0;
+
+      return {
+        progressCount,
+        historyCount,
+        dailyCount,
+        promptCellCount,
+        promptCount,
+        notesCount
+      };
+    }
+
+    async function importAppData(file) {
+      if (!file) return;
+
+      let parsed;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        backupImportStatus.textContent = "That file is not valid JSON.";
+        alert("That file is not valid JSON.");
+        return;
+      }
+
+      const data = parsed?.data;
+      if (!data || typeof data !== "object") {
+        backupImportStatus.textContent = "That file is not a valid Grammar Practice backup.";
+        alert("That file is not a valid Grammar Practice backup.");
+        return;
+      }
+
+      const counts = backupCounts(data);
+      const modeLabel = data.mode === "create" ? "Create" : "Respond";
+
+      if (!confirm(
+        "Import this backup?\n\n" +
+        "Contents:\n" +
+        `- ${counts.progressCount} progress cells\n` +
+        `- ${counts.historyCount} practice history entries\n` +
+        `- ${counts.dailyCount} days of daily stats\n` +
+        `- ${counts.promptCount} recent prompts across ${counts.promptCellCount} grammar cells\n` +
+        `- ${counts.notesCount} saved notes\n` +
+        `- mode: ${modeLabel}\n\n` +
+        "These local values will be replaced.\n" +
+        "Your DeepSeek API key and session token counters will not be changed."
+      )) {
+        backupImportStatus.textContent = "Import cancelled.";
+        return;
+      }
+
+      if (data.progress && typeof data.progress === "object" && !Array.isArray(data.progress)) {
+        localStorage.setItem(PROGRESS_STORAGE, JSON.stringify(data.progress));
+      }
+      if (Array.isArray(data.history)) {
+        localStorage.setItem(HISTORY_STORAGE, JSON.stringify(data.history));
+      }
+      if (data.dailyStats && typeof data.dailyStats === "object" && !Array.isArray(data.dailyStats)) {
+        localStorage.setItem(DAILY_STATS_STORAGE, JSON.stringify(data.dailyStats));
+      }
+      if (data.promptHistory && typeof data.promptHistory === "object" && !Array.isArray(data.promptHistory)) {
+        localStorage.setItem(PROMPT_HISTORY_STORAGE, JSON.stringify(data.promptHistory));
+      }
+      if (Array.isArray(data.notes)) {
+        localStorage.setItem(NOTES_STORAGE, JSON.stringify(data.notes));
+      }
+      if (data.mode === "respond" || data.mode === "create") {
+        localStorage.setItem(MODE_STORAGE, data.mode);
+        mode = data.mode;
+      }
+
+      respondModeBtn.classList.toggle("active", mode === "respond");
+      createModeBtn.classList.toggle("active", mode === "create");
+      updateTodayStatsDisplay();
+      renderTable();
+      closeBackupDialog();
+      alert(
+        "Backup imported.\n\n" +
+        `- ${counts.progressCount} progress cells\n` +
+        `- ${counts.historyCount} practice history entries\n` +
+        `- ${counts.dailyCount} days of daily stats\n` +
+        `- ${counts.promptCount} recent prompts\n` +
+        `- ${counts.notesCount} saved notes\n` +
+        `- mode: ${modeLabel}`
+      );
+    }
+
     function showSetup() {
       setup.classList.remove("hidden");
       app.classList.add("hidden");
@@ -1254,6 +2003,7 @@ Learner answer: ${text}`;
       app.classList.remove("hidden");
       respondModeBtn.classList.toggle("active", mode === "respond");
       createModeBtn.classList.toggle("active", mode === "create");
+      loadTodayTokenUsage();
       updateTokenStatsDisplay();
       updateTodayStatsDisplay();
       renderTable();
@@ -1272,14 +2022,72 @@ Learner answer: ${text}`;
 
     $("changeKey").addEventListener("click", showSetup);
 
+    $("backupData").addEventListener("click", openBackupDialog);
+    $("closeBackup").addEventListener("click", closeBackupDialog);
+
+    backupDialog.addEventListener("click", (event) => {
+      if (event.target === backupDialog) closeBackupDialog();
+    });
+
+    $("exportData").addEventListener("click", exportAppData);
+
+    $("importData").addEventListener("click", () => {
+      $("importFile").value = "";
+      $("importFile").click();
+    });
+
+    $("importFile").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      await importAppData(file);
+    });
+
+    backupDropZone.addEventListener("click", () => {
+      $("importFile").value = "";
+      $("importFile").click();
+    });
+
+    backupDropZone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        $("importFile").value = "";
+        $("importFile").click();
+      }
+    });
+
+    ["dragenter", "dragover"].forEach(type => {
+      backupDropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        backupDropZone.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(type => {
+      backupDropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        backupDropZone.classList.remove("dragover");
+      });
+    });
+
+    backupDropZone.addEventListener("drop", async (event) => {
+      const files = Array.from(event.dataTransfer?.files || []);
+      const file = files[0];
+
+      if (!file) return;
+
+      if (!file.name.toLowerCase().endsWith(".json")) {
+        backupImportStatus.textContent = "Please drop a .json backup file.";
+        return;
+      }
+
+      backupImportStatus.textContent = `Selected: ${file.name}`;
+      await importAppData(file);
+    });
+
     $("clearProgress").addEventListener("click", () => {
-      if (!confirm("Clear all locally stored practice progress and history?")) return;
+      if (!confirm("Clear only the per-cell correctness progress? Notes, history, daily stats, mode, prompts, and API key will be kept.")) return;
       localStorage.removeItem(PROGRESS_STORAGE);
-      localStorage.removeItem(HISTORY_STORAGE);
-      localStorage.removeItem(DAILY_STATS_STORAGE);
-      localStorage.removeItem(PROMPT_HISTORY_STORAGE);
-      localStorage.removeItem(NOTES_STORAGE);
-      updateTodayStatsDisplay();
       renderTable();
       feedback.classList.add("hidden");
     });
@@ -1287,8 +2095,11 @@ Learner answer: ${text}`;
     subjectSelect.addEventListener("change", () => {
       if (selected) {
         selected.subject = subjectSelect.value;
-        target.textContent = `${selected.tense.label} · ${selected.subject} · ${selected.form.label}`;
-        targetExample.textContent = `Reference: ${exampleFor(selected.tense.id, selected.subject, selected.form.id)}`;
+        target.textContent = `${selected.tense.label} · ${displaySubject(selected.subject)} · ${selected.form.label}`;
+        const referenceText = exampleFor(selected.tense.id, selected.subject, selected.form.id);
+        targetExample.textContent = isAllSubjects(selected.subject)
+          ? "Reference: I, You, He, She, It, We, They, [name]"
+          : `Reference: ${referenceText}`;
         hint.textContent = hintFor(selected.tense.id, selected.subject, selected.form.id);
         feedback.classList.add("hidden");
         if (mode === "respond") generatePrompt();
@@ -1312,6 +2123,10 @@ Learner answer: ${text}`;
     $("closeNote").addEventListener("click", closeNoteDialog);
     $("viewNotes").addEventListener("click", openNotesDialog);
     $("closeNotes").addEventListener("click", closeNotesDialog);
+    $("viewCellNotes").addEventListener("click", openCellNotesDialog);
+    $("closeCellNotes").addEventListener("click", closeCellNotesDialog);
+    $("closeTenseNotes").addEventListener("click", closeTenseNotesDialog);
+    $("saveTenseNote").addEventListener("click", saveTenseNote);
 
     noteForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -1320,16 +2135,20 @@ Learner answer: ${text}`;
       }
     });
 
-    practiceDialog.addEventListener("click", (event) => {
-      if (event.target === practiceDialog) closePracticeDialog();
-    });
-
     noteDialog.addEventListener("click", (event) => {
       if (event.target === noteDialog) closeNoteDialog();
     });
 
     notesDialog.addEventListener("click", (event) => {
       if (event.target === notesDialog) closeNotesDialog();
+    });
+
+    cellNotesDialog.addEventListener("click", (event) => {
+      if (event.target === cellNotesDialog) closeCellNotesDialog();
+    });
+
+    tenseNotesDialog.addEventListener("click", (event) => {
+      if (event.target === tenseNotesDialog) closeTenseNotesDialog();
     });
 
     checkBtn.addEventListener("click", async () => {
