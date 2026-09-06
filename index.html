@@ -343,7 +343,20 @@
       .row.mobile-stack { align-items: stretch; }
       .row.mobile-stack > * { width: 100%; }
     }
-  </style>
+  
+    .usage-note {
+      margin-top: 8px;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
+      font-size: .74rem;
+      line-height: 1.45;
+      color: var(--text);
+      max-width: 760px;
+    }
+    .usage-note strong { font-weight: 700; }
+</style>
 </head>
 <body>
   <main class="wrap">
@@ -362,7 +375,7 @@
       <header class="topbar row between">
         <div>
           <h1>Grammar Practice</h1>
-          <div class="muted tiny">Select a subject, choose a mode, then tap a grammar cell.</div>
+          <div class="muted tiny">American English emphasis · Select a subject, choose a mode, then tap a grammar cell.</div>
         </div>
         <div class="row">
           <span id="tokenStats" class="tiny muted">Tokens: 0 in / 0 out</span>
@@ -423,6 +436,7 @@
             <div>
               <div id="target" class="target"></div>
               <div id="targetExample" class="tiny muted"></div>
+              <div id="americanUsage" class="usage-note hidden"></div>
             </div>
             <div class="row">
               <button id="hintBtn" type="button">Hint</button>
@@ -600,7 +614,7 @@
       { id: "presentContinuous", label: "Present Continuous", priority: "high", structure: "am/is/are + verb-ing" },
       { id: "presentPerfect", label: "Present Perfect", priority: "high", structure: "have/has + past participle" },
       { id: "presentPerfectContinuous", label: "Present Perfect Continuous", priority: "medium", structure: "have/has + been + verb-ing" },
-      { id: "pastSimple", label: "Past Simple", priority: "high", structure: "past verb / did" },
+      { id: "pastSimple", label: "Past Simple", priority: "very high", structure: "past verb / did" },
       { id: "pastContinuous", label: "Past Continuous", priority: "medium", structure: "was/were + verb-ing" },
       { id: "pastPerfect", label: "Past Perfect", priority: "medium", structure: "had + past participle" },
       { id: "pastPerfectContinuous", label: "Past Perfect Continuous", priority: "low", structure: "had + been + verb-ing" },
@@ -617,6 +631,7 @@
     const grammarBody = $("grammarBody");
     const workspace = $("workspace");
     const practiceDialog = $("practiceDialog");
+    const americanUsage = $("americanUsage");
     const target = $("target");
     const targetExample = $("targetExample");
     const hint = $("hint");
@@ -1254,12 +1269,15 @@
       return subject === "[all]" ? "All subjects" : subject;
     }
 
+    // Usage heat tuned for contemporary American English.
+    // U.S. English often favors Past Simple in casual/recent-past contexts
+    // where British English more strongly favors Present Perfect.
     const TENSE_USAGE_WEIGHT = {
       presentSimple: 1.00,
+      pastSimple: 0.97,
       presentContinuous: 0.92,
-      pastSimple: 0.90,
       futureSimple: 0.82,
-      presentPerfect: 0.78,
+      presentPerfect: 0.72,
       pastContinuous: 0.68,
       presentPerfectContinuous: 0.58,
       pastPerfect: 0.56,
@@ -1432,7 +1450,49 @@
       return "";
     }
 
+    function americanUsageNote(tenseId, formId) {
+      if (tenseId === "pastSimple") {
+        if (formId === "affirmative") {
+          return `<strong>American English usage:</strong> Simple Past is very common for recent completed actions, especially with <em>already</em> and <em>just</em>. Examples: “I already ate.” “I just called her.”`;
+        }
+        if (formId === "question" || formId === "negativeQuestion") {
+          return `<strong>American English usage:</strong> Simple Past is common with <em>yet</em> in casual questions. Example: “Did you finish yet?” Present Perfect is also correct: “Have you finished yet?”`;
+        }
+        if (formId === "wh" || formId === "negativeWh") {
+          return `<strong>American English usage:</strong> Simple Past is often natural for recent completed events. Example: “Why did you leave already?” Present Perfect may be preferred when the connection to now is the main point.`;
+        }
+        return `<strong>American English usage:</strong> Simple Past is often used in casual recent-past situations where British English more strongly favors Present Perfect.`;
+      }
+
+      if (tenseId === "presentPerfect") {
+        if (formId === "affirmative") {
+          return `<strong>American English usage:</strong> Present Perfect is still important for life experience, unfinished time, duration up to now, and present results: “I’ve lived here for five years.” For some recent completed actions, Americans also commonly use Simple Past: “I already ate.”`;
+        }
+        if (formId === "question" || formId === "negativeQuestion") {
+          return `<strong>American English usage:</strong> Present Perfect questions are fully normal. With <em>yet</em>, casual American English also often uses Simple Past: “Did you finish yet?” alongside “Have you finished yet?”`;
+        }
+        if (formId === "wh" || formId === "negativeWh") {
+          return `<strong>American English usage:</strong> Present Perfect is useful when the question connects past experience or events to now. Simple Past is often more natural when asking about a specific completed time or event.`;
+        }
+        return `<strong>American English usage:</strong> Present Perfect remains a core American-English tense. Do not avoid it; Simple Past is simply more common in some casual recent-past contexts.`;
+      }
+
+      return "";
+    }
+
+    function renderAmericanUsageNote(tenseId, formId) {
+      const note = americanUsageNote(tenseId, formId);
+      americanUsage.innerHTML = note;
+      americanUsage.classList.toggle("hidden", !note);
+    }
+
     function hintFor(tenseId, subject, formId) {
+      if (tenseId === "pastSimple") {
+        const baseHint = isAllSubjects(subject)
+          ? "Use any subject: I / you / he / she / it / we / they / any singular noun. Apply the correct past form or did/didn't structure."
+          : `Use ${displaySubject(subject)} with the correct Past Simple form.`;
+        return `${baseHint} American English commonly uses Past Simple with already, just, and yet: "I already ate.", "I just called her.", "Did you finish yet?"`;
+      }
       if (isAllSubjects(subject)) {
         return "Use any subject: I / you / he / she / it / we / they / any singular noun. Apply the correct auxiliary or verb form for each subject.";
       }
@@ -1569,6 +1629,7 @@
         ? "Reference: I, You, He, She, It, We, They, [name]"
         : `Reference: ${referenceText}`;
       hint.textContent = hintFor(tense.id, subject, form.id);
+      renderAmericanUsageNote(tense.id, form.id);
       hint.classList.add("hidden");
       feedback.classList.add("hidden");
       setPrimaryAction(false);
@@ -1716,6 +1777,9 @@
 Return JSON only with exactly these keys:
 {"message":"...", "context":"..."}
 
+Use natural contemporary American English.
+Prefer U.S. grammar and usage when dialects differ. In casual/recent-past contexts, Past Simple is often natural in American English where British English may prefer Present Perfect.
+
 The learner must reply using the requested tense and sentence type.
 Write one short, natural message, usually 1 sentence and never more than 2.
 Do NOT mention grammar, tense names, or the reference sentence.
@@ -1730,6 +1794,9 @@ The selected subject is reference information only. In conversation, allow the l
         : `You create tiny English grammar creation exercises.
 Return JSON only with exactly these keys:
 {"message":"...", "context":"..."}
+
+Use natural contemporary American English.
+Prefer U.S. grammar and usage when dialects differ.
 
 Give the learner one short instruction that makes them CREATE their own sentence using the requested tense, exact subject, and sentence type.
 Do NOT provide the answer.
@@ -1810,6 +1877,11 @@ Return JSON only with exactly these keys:
 }
 
 Rules:
+- Target contemporary standard American English.
+- Prefer American usage when British and American English differ.
+- In casual/recent-past contexts, accept and often prefer Past Simple forms such as "I already ate." and "Did you finish yet?".
+- Present Perfect remains fully valid and important for life experience, unfinished time, duration up to now, and strong present-result meanings.
+- Do not mark a standard British form wrong solely because it is British; if relevant, explain the more typical American choice briefly.
 - In Respond mode, judge the requested tense and sentence type, but DO NOT require the learner to literally use the selected subject pronoun. Pronouns should follow natural conversational perspective. Example: if the app asks "What do you usually do in the mornings?", "I brush my teeth." can be correct even when the selected table subject is "You".
 - In Create mode, require the requested tense, exact selected subject, and sentence type.
 - When the selected subject is "[all]", do NOT require one exact subject. Accept any of these subjects: I, you, he, she, it, we, they, or any singular noun phrase represented by "[name]". The learner may provide either one valid sentence or multiple sentences. If multiple sentences are provided, every sentence must match the requested tense and sentence type and use a grammatically correct subject/auxiliary combination.
@@ -2110,6 +2182,7 @@ Learner answer: ${text}`;
           ? "Reference: I, You, He, She, It, We, They, [name]"
           : `Reference: ${referenceText}`;
         hint.textContent = hintFor(selected.tense.id, selected.subject, selected.form.id);
+        renderAmericanUsageNote(selected.tense.id, selected.form.id);
         feedback.classList.add("hidden");
         if (mode === "respond") generatePrompt();
       }
